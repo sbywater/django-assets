@@ -105,8 +105,10 @@ class DjangoResolver(Resolver):
 
     @property
     def use_staticfiles(self):
-        return settings.ASSETS_DEBUG and \
-            'django.contrib.staticfiles' in settings.INSTALLED_APPS
+        enabled = getattr(settings, 'ASSETS_USE_STATICFILES',
+                          settings.ASSETS_DEBUG)
+        installed = 'django.contrib.staticfiles' in settings.INSTALLED_APPS
+        return enabled and installed
 
     def glob_staticfiles(self, item):
         # The staticfiles finder system can't do globs, but we can
