@@ -26,6 +26,10 @@ class DjangoConfigStorage(ConfigStorage):
         'url_mapping': 'ASSETS_URL_MAPPING',
     }
 
+    def __init__(self, env):
+        super(DjangoConfigStorage, self).__init__(env)
+        self.options = {}
+
     def _transform_key(self, key):
         # STATIC_* are the new Django 1.3 settings,
         # MEDIA_* was used in earlier versions.
@@ -49,26 +53,22 @@ class DjangoConfigStorage(ConfigStorage):
         return self._mapping.get(key.lower(), key.upper())
 
     def __contains__(self, key):
-        return hasattr(settings, self._transform_key(key))
+        django_key = self._transform_key(key)
+        return key in self.options or hasattr(settings, django_key)
 
     def __getitem__(self, key):
-        if self.__contains__(key):
-            value = self._get_deprecated(key)
-            if value is not None:
-                return value
-            return getattr(settings, self._transform_key(key))
-        else:
+        django_key = self._transform_key(key)
+        try:
+            self.options.get(key, getattr(settings, django_key))
+        except AttributeError:
             raise KeyError("Django settings doesn't define %s" %
                            self._transform_key(key))
 
     def __setitem__(self, key, value):
-        if not self._set_deprecated(key, value):
-            setattr(settings, self._transform_key(key), value)
+        self.options[key] = value
 
     def __delitem__(self, key):
-        # This isn't possible to implement in Django without relying
-        # on internals of the settings object, so just set to None.
-        self.__setitem__(key, None)
+        del self.options[key]
 
 
 class StorageGlobber(Globber):
