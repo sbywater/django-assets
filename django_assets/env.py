@@ -62,7 +62,7 @@ class DjangoConfigStorage(ConfigStorage):
             return self.options[key]
         except KeyError:
             try:
-                getattr(settings, django_key)
+                return getattr(settings, django_key)
             except AttributeError:
                 raise KeyError("Django settings doesn't define %s" %
                                self._transform_key(key))
