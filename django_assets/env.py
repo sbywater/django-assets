@@ -59,10 +59,13 @@ class DjangoConfigStorage(ConfigStorage):
     def __getitem__(self, key):
         django_key = self._transform_key(key)
         try:
-            return self.options.get(key, getattr(settings, django_key))
-        except AttributeError:
-            raise KeyError("Django settings doesn't define %s" %
-                           self._transform_key(key))
+            return self.options[key]
+        except KeyError:
+            try:
+                getattr(settings, django_key)
+            except AttributeError:
+                raise KeyError("Django settings doesn't define %s" %
+                               self._transform_key(key))
 
     def __setitem__(self, key, value):
         self.options[key] = value
