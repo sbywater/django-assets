@@ -32,6 +32,11 @@ module to modify the behaviour of ``webassets``.
 
 .. autodata:: ASSETS_CACHE
 
+.. data:: ASSETS_USE_STATICFILES
+
+    A boolean flag which controls whether the integration with
+    django.contrib.staticfiles is enabled. Defaults to ``ASSETS_DEBUG``.
+
 .. data:: ASSETS_JINJA2_EXTENSIONS
 
     This is needed in some cases when you want to use ``django-assets`` with

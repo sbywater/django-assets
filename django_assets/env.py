@@ -28,6 +28,10 @@ class DjangoConfigStorage(ConfigStorage):
         'url_mapping': 'ASSETS_URL_MAPPING',
     }
 
+    def __init__(self, env):
+        super(DjangoConfigStorage, self).__init__(env)
+        self.options = {}
+
     def _transform_key(self, key):
         if key.lower() == 'directory':
             if hasattr(settings, 'ASSETS_ROOT'):
@@ -48,26 +52,25 @@ class DjangoConfigStorage(ConfigStorage):
         return self._mapping.get(key.lower(), key.upper())
 
     def __contains__(self, key):
-        return hasattr(settings, self._transform_key(key))
+        django_key = self._transform_key(key)
+        return key in self.options or hasattr(settings, django_key)
 
     def __getitem__(self, key):
-        if self.__contains__(key):
-            value = self._get_deprecated(key)
-            if value is not None:
-                return value
-            return getattr(settings, self._transform_key(key))
-        else:
-            raise KeyError("Django settings doesn't define %s" %
-                           self._transform_key(key))
+        django_key = self._transform_key(key)
+        try:
+            return self.options[key]
+        except KeyError:
+            try:
+                return getattr(settings, django_key)
+            except AttributeError:
+                raise KeyError("Django settings doesn't define %s" %
+                               self._transform_key(key))
 
     def __setitem__(self, key, value):
-        if not self._set_deprecated(key, value):
-            setattr(settings, self._transform_key(key), value)
+        self.options[key] = value
 
     def __delitem__(self, key):
-        # This isn't possible to implement in Django without relying
-        # on internals of the settings object, so just set to None.
-        self.__setitem__(key, None)
+        del self.options[key]
 
 
 class StorageGlobber(Globber):
@@ -104,8 +107,10 @@ class DjangoResolver(Resolver):
 
     @property
     def use_staticfiles(self):
-        return settings.ASSETS_DEBUG and \
-            'django.contrib.staticfiles' in settings.INSTALLED_APPS
+        enabled = getattr(settings, 'ASSETS_USE_STATICFILES',
+                          settings.ASSETS_DEBUG)
+        installed = 'django.contrib.staticfiles' in settings.INSTALLED_APPS
+        return enabled and installed
 
     def glob_staticfiles(self, item):
         # The staticfiles finder system can't do globs, but we can
